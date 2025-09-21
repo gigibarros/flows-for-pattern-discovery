@@ -1,0 +1,17 @@
+[project]
+name = "flows-for-pattern-discovery"
+version = "0.1.0"
+description = "A probabilistic framework for unbiased pattern discovery in multimodal biological data."
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+    { email = "gabgbarros@gmail.com", name = "Gabriela Barros" },
+    { email = "funkej@janelia.hhmi.org", name = "Jan Funke" },
+]
+dependencies = [
+    "matplotlib>=3.10.6",
+    "numpy>=2.3.3",
+    "torch>=2.8.0",
+    "tqdm>=4.67.1",
+]
