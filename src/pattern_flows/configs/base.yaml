@@ -1,0 +1,11 @@
+device:
+  type: "cpu"
+
+training:
+  batch_size: 32
+  num_workers: 0
+  pin_memory: True
+  z_dim: 64
+  
+paths:
+  output_dir: "experiment_outputs"

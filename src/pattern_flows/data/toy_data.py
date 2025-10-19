@@ -60,18 +60,20 @@ def generate_alpha(num_timepoints, num_words, peaks_per_word=5, scale=1.0, smoot
     alpha = alpha / (alpha.sum(dim=1, keepdim=True) + 1e-8)
     return alpha
 
-class ToyDataset(Dataset):
+class ToyData(Dataset):
     def __init__(self, num_samples, num_neurons=100_000, num_words=100, num_timesteps=600):
         self.num_samples = num_samples
         self.num_neurons = num_neurons
         self.num_words = num_words
         self.num_timesteps = num_timesteps
+        self.overlap = int(num_neurons // (num_words * 2))  # arbitrary, may change later
+        print("overlap: ", self.overlap)
 
         # create words with subset of signal words for learnable class differences
         num_signal = max(1, self.num_words // 10)
         self.signal_words = random.sample(range(self.num_words), k=num_signal)
 
-        base_words = generate_words(self.num_words, self.num_neurons)
+        base_words = generate_words(self.num_words, self.num_neurons, overlap=self.overlap)
         self.words_0 = base_words.clone()
         self.words_1 = base_words.clone()
 
@@ -114,3 +116,11 @@ class ToyDataset(Dataset):
 
         return x
 
+def get_toy_data():
+    return ToyData()
+
+def get_train_loader(base_config):
+    return DataLoader(dataset=get_toy_data(), batch_size=base_config.batch_size, shuffle=True, drop_last=True)
+
+def get_valid_loader(base_config):
+    return DataLoader(dataset=get_toy_data(), batch_size=base_config.batch_size, shuffle=False, drop_last=True)

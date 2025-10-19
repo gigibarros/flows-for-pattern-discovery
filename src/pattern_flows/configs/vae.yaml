@@ -1,0 +1,10 @@
+vae_model:
+  name       : "model_vae"
+
+  input_dim  : 600
+  hidden_dim : 256
+  latent_dim : 64
+
+  num_epochs : 100
+  beta_loss  : 1.0
+  lr         : 1e-3
