@@ -87,18 +87,19 @@ class JointVAE(nn.Module):
 
         return x_hat, mean, log_var
 
-def get_vae(config, multimodal=False, ckpt_file=None):
-    input_dim = config.input_dim
-    hidden_dim = config.hidden_dim
-    latent_dim = config.latent_dim
+def get_vae(input_dim, hidden_dim, latent_dim, device, multimodal=False, ckpt_file=None):
+    input_dim = input_dim
+    hidden_dim = hidden_dim
+    latent_dim = latent_dim
 
     encoder = Encoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
-    decoder = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, input_dim=input_dim)
+    decoder = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, output_dim=input_dim)
 
     if multimodal:
-        vae = JointVAE(encoders=encoder, decoders=decoder, device=config.device).to(config.device)
+        # TO-DO : Add support for multimodal dataset
+        vae = JointVAE(encoders=encoder, decoders=decoder, device=device).to(device)
     else:
-        vae = VAE(encoder=encoder, decoder=decoder, device=config.device).to(config.device)
+        vae = VAE(encoder=encoder, decoder=decoder, device=device).to(device)
 
     if ckpt_file:
         vae.load_state_dict(torch.load(ckpt_file))

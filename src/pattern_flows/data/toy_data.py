@@ -61,15 +61,14 @@ def generate_alpha(num_timepoints, num_words, peaks_per_word=5, scale=1.0, smoot
     return alpha
 
 class ToyData(Dataset):
-    def __init__(self, num_samples, num_neurons=100_000, num_words=100, num_timesteps=600):
+    def __init__(self, num_samples, num_neurons, num_words, num_timesteps):
         self.num_samples = num_samples
         self.num_neurons = num_neurons
         self.num_words = num_words
         self.num_timesteps = num_timesteps
         self.overlap = int(num_neurons // (num_words * 2))  # arbitrary, may change later
-        print("overlap: ", self.overlap)
 
-        # create words with subset of signal words for learnable class differences
+        # Create words with subset of signal words for learnable class differences
         num_signal = max(1, self.num_words // 10)
         self.signal_words = random.sample(range(self.num_words), k=num_signal)
 
@@ -83,13 +82,16 @@ class ToyData(Dataset):
         self.xs = []
         self.ys = []
 
-
         for _ in range(num_samples):
             y = random.randint(0, 1)
             x = self.generate_x(y)
 
             self.ys.append(y)
             self.xs.append(x)
+
+    def __len__(self):
+        return len(self.xs)
+
 
     def __getitem__(self, idx):
         x = self.xs[idx]
@@ -116,11 +118,11 @@ class ToyData(Dataset):
 
         return x
 
-def get_toy_data():
-    return ToyData()
+def get_toy_data(num_samples, num_neurons, num_words, num_timesteps):
+    return ToyData(num_samples, num_neurons, num_words, num_timesteps)
 
-def get_train_loader(base_config):
-    return DataLoader(dataset=get_toy_data(), batch_size=base_config.batch_size, shuffle=True, drop_last=True)
+def get_train_loader(num_samples=10_000, num_neurons=100_000, num_words=100, num_timesteps=600, batch_size=32):
+    return DataLoader(dataset=ToyData(num_samples, num_neurons, num_words, num_timesteps), batch_size=batch_size, shuffle=True, drop_last=True)
 
-def get_valid_loader(base_config):
-    return DataLoader(dataset=get_toy_data(), batch_size=base_config.batch_size, shuffle=False, drop_last=True)
+def get_valid_loader(num_samples=10_000, num_neurons=100_000, num_words=100, num_timesteps=600, batch_size=32):
+    return DataLoader(dataset=ToyData(num_samples, num_neurons, num_words, num_timesteps), batch_size=batch_size, shuffle=False, drop_last=True)

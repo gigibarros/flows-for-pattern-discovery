@@ -2,7 +2,7 @@ import torch
 from torch.optim import Adam
 import torch.nn.functional as F
 
-import utils as u
+import pattern_flows.utils as u
 
 from pattern_flows.data.toy_data import get_train_loader, get_valid_loader
 from pattern_flows.models.vae import get_vae
@@ -22,26 +22,31 @@ if __name__ == "__main__":
     
     # Load parameters
     # TO-DO : Create helper function for loading parameters
-    device     = cfg["device"]["type"]
-    batch_size = cfg["training"]["batch_size"]
-    output_dir = cfg["paths"]["output_dir"]
+    device        = cfg["device"]["type"]
+    batch_size    = cfg["training"]["batch_size"]
+    output_path   = cfg["paths"]["output_path"]
 
-    model_name = cfg["vae_model"]["name"]
-    input_dim  = cfg["vae_model"]["input_dim"]
-    hidden_dim = cfg["vae_model"]["hidden_dim"]
-    latent_dim = cfg["vae_model"]["latent_dim"]
-    num_epochs = cfg["vae_model"]["num_epochs"]
-    beta_loss  = cfg["vae_model"]["beta_loss"]
-    lr         = cfg["vae_model"]["lr"]
+    num_samples   = cfg["data"]["num_samples"]
+    num_neurons   = cfg["data"]["num_neurons"]
+    num_words     = cfg["data"]["num_words"]
+    num_timesteps = cfg["data"]["num_timesteps"]
 
-    train_loader = get_train_loader(cfg)
-    valid_loader = get_valid_loader(cfg)
+    model_name    = cfg["vae_model"]["name"]
+    input_dim     = cfg["vae_model"]["input_dim"]
+    hidden_dim    = cfg["vae_model"]["hidden_dim"]
+    latent_dim    = cfg["vae_model"]["latent_dim"]
+    num_epochs    = cfg["vae_model"]["num_epochs"]
+    beta_loss     = cfg["vae_model"]["beta_loss"]
+    lr            = cfg["vae_model"]["lr"]
 
-    vae_model = get_vae(cfg)
+    train_loader = get_train_loader(num_samples, num_neurons, num_words, num_timesteps, batch_size)
+    valid_loader = get_valid_loader(num_samples, num_neurons, num_words, num_timesteps, batch_size)
+
+    vae_model = get_vae(input_dim, hidden_dim, latent_dim, device, multimodal=False)
 
     optimizer = Adam(vae_model.parameters(), lr=lr)
 
-    save_dir = u.get_save_dir(model_name)
+    save_dir = u.get_save_dir(output_path, model_name)
     save_dir.mkdir(exist_ok=True, parents=True)
 
     train_losses = []
@@ -65,7 +70,8 @@ if __name__ == "__main__":
         vae_model.train()
 
         for batch_idx, batch in enumerate(train_loader):
-            x = batch[0].to(device)
+            x = batch[0]
+            x = torch.flatten(x, start_dim=1, end_dim=-1).to(device)
 
             optimizer.zero_grad()
 
@@ -90,8 +96,9 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             for batch_idx, batch in enumerate(valid_loader):
-                x = batch[0].to(device)
-
+                x = batch[0]
+                x = torch.flatten(x, start_dim=1, end_dim=-1).to(device)
+                
                 optimizer.zero_grad()
 
                 # Compute losses
