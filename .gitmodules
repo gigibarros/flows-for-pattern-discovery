@@ -1,3 +1,0 @@
-[submodule "external/ml-tarflow"]
-	path = external/ml-tarflow
-	url = https://github.com/funkelab/ml-tarflow.git
