@@ -3,11 +3,14 @@ from torch.optim import Adam
 import torch.nn.functional as F
 
 import pattern_flows.utils as u
-
 from pattern_flows.data.toy_data import get_train_loader, get_valid_loader
 from pattern_flows.models.vae import get_vae
 
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import numpy as np
+import umap.umap_ as umap
+import seaborn as sns
 
 def compute_loss(x):
     x_hat, mean, log_var = vae_model(x)
@@ -17,8 +20,56 @@ def compute_loss(x):
 
     return reconst_loss, d_kl
 
+def vae_umap(vae_model, valid_loader, save_dir=None):
+    """Plot UMAP of VAE latent space."""
+    zs = []
+    labels = []
+
+    vae_model.eval()
+
+    with torch.no_grad():
+        for batch in valid_loader:
+            x = batch[0]
+            y = batch[1]
+
+            x = torch.flatten(x, start_dim=1, end_dim=-1).to(vae_model.device)
+
+            _, mean, _ = vae_model(x)
+
+            zs.append(mean.cpu().numpy())
+            labels.append(y.cpu().numpy())
+
+    zs = np.concatenate(zs, axis=0)
+    labels = np.concatenate(labels, axis=0)
+
+    reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, metric="euclidean", random_state=42)
+    embedding = reducer.fit_transform(zs)
+
+    plt.figure(figsize=(8, 6))
+
+    colors = sns.color_palette("Set1", n_colors=len(np.unique(labels)))
+
+    for i, label_val in enumerate(np.unique(labels)):
+        idx = labels == label_val
+        plt.scatter(
+            embedding[idx, 0], embedding[idx, 1],
+            c=[colors[i]], label=f"Class {label_val}", s=12, alpha=0.8
+        )    
+        
+    plt.title("UMAP projection of VAE latent space")
+    plt.xlabel("UMAP 1")
+    plt.ylabel("UMAP 2")
+    plt.legend
+    plt.tight_layout()
+
+    if save_dir is not None:
+        plt.savefig(save_dir / "vae_umap.png")
+        plt.close()
+    else:
+        plt.show()
+
 if __name__ == "__main__":
-    cfg = u.load_config("configs/base.yaml", "configs/vae.yaml")
+    cfg = u.load_config("configs/base.yaml")
     
     # Load parameters
     # TO-DO : Create helper function for loading parameters
@@ -39,14 +90,14 @@ if __name__ == "__main__":
     beta_loss     = cfg["vae_model"]["beta_loss"]
     lr            = cfg["vae_model"]["lr"]
 
-    train_loader = get_train_loader(num_samples, num_neurons, num_words, num_timesteps, batch_size)
-    valid_loader = get_valid_loader(num_samples, num_neurons, num_words, num_timesteps, batch_size)
+    train_loader = get_train_loader(cfg)
+    valid_loader = get_valid_loader(cfg)
 
-    vae_model = get_vae(input_dim, hidden_dim, latent_dim, device, multimodal=False)
+    vae_model = get_vae(cfg, device, multimodal=False)
 
     optimizer = Adam(vae_model.parameters(), lr=lr)
 
-    save_dir = u.get_save_dir(output_path, model_name)
+    save_dir = u.get_save_dir(__file__, output_path, model_name)
     save_dir.mkdir(exist_ok=True, parents=True)
 
     train_losses = []
@@ -118,4 +169,4 @@ if __name__ == "__main__":
     torch.save(vae_model.state_dict(), save_dir / f"{model_name}.pth")
 
     u.plot_losses(train_losses, valid_losses, save_dir)
-    u.vae_umap(vae_model, valid_loader, save_dir)
+    vae_umap(vae_model, valid_loader, save_dir)

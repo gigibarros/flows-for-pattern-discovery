@@ -118,11 +118,28 @@ class ToyData(Dataset):
 
         return x
 
-def get_toy_data(num_samples, num_neurons, num_words, num_timesteps):
+def get_toy_dataset(config):
+    num_samples   = config["data"]["num_samples"]
+    num_neurons   = config["data"]["num_neurons"]
+    num_words     = config["data"]["num_words"]
+    num_timesteps = config["data"]["num_timesteps"]
+
     return ToyData(num_samples, num_neurons, num_words, num_timesteps)
 
-def get_train_loader(num_samples=10_000, num_neurons=100_000, num_words=100, num_timesteps=600, batch_size=32):
+def get_train_loader(config):
+    num_samples   = config["data"]["num_samples"]
+    num_neurons   = config["data"]["num_neurons"]
+    num_words     = config["data"]["num_words"]
+    num_timesteps = config["data"]["num_timesteps"]
+    batch_size    = config["training"]["batch_size"]
+
     return DataLoader(dataset=ToyData(num_samples, num_neurons, num_words, num_timesteps), batch_size=batch_size, shuffle=True, drop_last=True)
 
-def get_valid_loader(num_samples=10_000, num_neurons=100_000, num_words=100, num_timesteps=600, batch_size=32):
+def get_valid_loader(config):
+    num_samples   = config["data"]["num_samples"]
+    num_neurons   = config["data"]["num_neurons"]
+    num_words     = config["data"]["num_words"]
+    num_timesteps = config["data"]["num_timesteps"]
+    batch_size    = config["training"]["batch_size"]
+
     return DataLoader(dataset=ToyData(num_samples, num_neurons, num_words, num_timesteps), batch_size=batch_size, shuffle=False, drop_last=True)

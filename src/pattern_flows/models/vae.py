@@ -87,10 +87,12 @@ class JointVAE(nn.Module):
 
         return x_hat, mean, log_var
 
-def get_vae(input_dim, hidden_dim, latent_dim, device, multimodal=False, ckpt_file=None):
-    input_dim = input_dim
-    hidden_dim = hidden_dim
-    latent_dim = latent_dim
+def get_vae(config, multimodal=False, ckpt_file=None):
+    """Initialize or load existing VAE model."""
+    device     = config["device"]["type"]
+    input_dim  = config["vae"]["input_dim"]
+    hidden_dim = config["vae"]["hidden_dim"]
+    latent_dim = config["vae"]["latent_dim"]
 
     encoder = Encoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
     decoder = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, output_dim=input_dim)
