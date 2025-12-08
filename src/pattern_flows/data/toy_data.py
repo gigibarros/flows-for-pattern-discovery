@@ -66,7 +66,7 @@ class ToyData(Dataset):
         self.num_neurons = num_neurons
         self.num_words = num_words
         self.num_timesteps = num_timesteps
-        self.overlap = int(num_neurons // (num_words * 2))  # arbitrary, may change later
+        self.overlap = int(num_neurons // (num_words * 2))  # overlap between words
 
         # Create words with subset of signal words for learnable class differences
         num_signal = max(1, self.num_words // 10)
@@ -77,7 +77,7 @@ class ToyData(Dataset):
         self.words_1 = base_words.clone()
 
         for k in self.signal_words:
-            self.words_1[k] *= 2.0
+            self.words_1[k] *= 2.0  # amplify signal words for class y = 1
 
         self.xs = []
         self.ys = []
