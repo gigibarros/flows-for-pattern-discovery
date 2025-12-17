@@ -7,16 +7,17 @@ class Encoder(nn.Module):
 
         self.fc_input1 = nn.Linear(input_dim, hidden_dim)
         self.fc_input2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc_mean = nn.Linear(hidden_dim, latent_dim)
+        self.fc_input3 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc_mean   = nn.Linear(hidden_dim, latent_dim)
         self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
 
         self.LeakyReLU = nn.LeakyReLU(0.2)
 
-        self.training = True
-
     def forward(self, x):
         h = self.LeakyReLU(self.fc_input1(x))
         h = self.LeakyReLU(self.fc_input2(h))
+        h = self.LeakyReLU(self.fc_input3(h))
+
         mean = self.fc_mean(h)
         log_var = self.fc_logvar(h)
 
@@ -27,13 +28,15 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.fc_hidden1 = nn.Linear(latent_dim, hidden_dim)
         self.fc_hidden2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc_output = nn.Linear(hidden_dim, output_dim)
+        self.fc_hidden3 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc_output  = nn.Linear(hidden_dim, output_dim)
 
-        self.LeakyReLU = nn.LeakyReLU(0.2)
+        self.LeakyReLU  = nn.LeakyReLU(0.2)
 
     def forward(self, x):
         h = self.LeakyReLU(self.fc_hidden1(x))
         h = self.LeakyReLU(self.fc_hidden2(h))
+        h = self.LeakyReLU(self.fc_hidden3(h))
 
         x_hat = self.fc_output(h)
 
@@ -99,9 +102,9 @@ def get_vae(config, multimodal=False, ckpt_file=None):
 
     if multimodal:
         # TO-DO : Add support for multimodal dataset
-        vae = JointVAE(encoders=encoder, decoders=decoder, device=device).to(device)
+        vae = JointVAE(encoders=encoder, decoders=decoder, device=device)
     else:
-        vae = VAE(encoder=encoder, decoder=decoder, device=device).to(device)
+        vae = VAE(encoder=encoder, decoder=decoder, device=device)
 
     if ckpt_file:
         vae.load_state_dict(torch.load(ckpt_file))

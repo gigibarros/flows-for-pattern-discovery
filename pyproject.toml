@@ -24,5 +24,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-tarflow = {git = "https://github.com/funkelab/tarflow"}
-# tarflow = {path = "../tarflow", editable = true}  # Use this line for local development
+# tarflow = {git = "https://github.com/funkelab/tarflow"}
+tarflow = {path = "../tarflow", editable = true}  # Use this line for local development
