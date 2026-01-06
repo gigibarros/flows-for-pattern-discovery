@@ -26,52 +26,59 @@ def get_save_dir(output_dir):
 
     return save_dir
 
-def plot_losses(train_losses, valid_losses, save_dir):
+def plot_losses(train_losses, valid_losses, save_dir, save_tag=""):
     """Plot training and validation losses."""
     plt.plot(train_losses, label="Training loss")
-    plt.plot(valid_losses, label="Validation loss")
+    plt.plot(valid_losses, label="Validation losss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
+    plt.set_ylim(0, min(train_losses[0], 10))
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig(save_dir / "losses.png")
+    plt.savefig(save_dir / f"losses_{save_tag}.png")
     plt.close()
 
-def sample_p_xy(tarflow_model, sample_dir, config, epoch=None):
-    samples_per_class = 4
+def _plot_samples(xs, y, save_dir, save_tag=""):
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
 
-    device = config["device"]["type"]
+    vmin = min(x.min() for x in xs)
+    vmax = max(x.max() for x in xs)
 
-    input_dim = config["vae"]["input_dim"]
-    token_size = config["tarflow_model"]["token_size"]
+    for idx, ax in enumerate(axs.flat):
+        im = ax.imshow(xs[idx].T, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
+        ax.set_ylabel("Activity")
+        ax.set_xlabel("Time")
 
-    zs = torch.randn(samples_per_class, input_dim, token_size)
-    zs = zs.to(device)  
+    fig.colorbar(im, ax=axs, shrink=0.8)
+    fig.suptitle(f"Generative samples conditioned on y = {y}")
+
+    fig.savefig(save_dir / f"samples_{save_tag}_y={y}.png")
+    plt.close(fig)
+
+def sample(vae, tarflow, config, save_dir, save_tag=""):
+    num_timesteps     = config["data"]["num_timesteps"]
+    num_neurons       = config["data"]["num_neurons"]
+    token_size        = config["tarflow"]["token_size"]
+    z_dim             = config["tarflow"]["z_dim"]
+    device            = config["device"]["type"]
+    samples_per_y     = 4
+
+    samples = torch.randn(samples_per_y, z_dim, token_size).to(device)
 
     for y in [0, 1]:
+        xs = []
+
         with torch.no_grad():
-            x_samples = tarflow_model.reverse(zs, y)   # xc_samples shape : (samples_per_class, input_dims["xc"], token_size)
-    
-        x_samples = x_samples.squeeze(-1)
-        x_samples = x_samples.view(x_samples.size(0), 8, 8)
-        x_samples = x_samples.detach().cpu()
-        
-        for j, sample in enumerate(x_samples):
-            plt.figure()
-            for series in sample:
-                plt.plot(series.numpy())
-
-            plt.title(f"hidden_var={y}, sample #{j}")
-
-            if epoch is not None:
-                fname = sample_dir / f"epoch_{epoch}_sample_{j}_hidden_{y}.png"
-            else:
-                fname = sample_dir / f"sample_{j}_hidden_{y}.png"
-
-            plt.savefig(fname)
-            plt.close()    
+            zs = tarflow.reverse(samples, y)  # shape : (samples_per_class, z_dim, token_size)
             
-        del x_samples
+        for z in zs:
+            z = z.squeeze(-1)  # shape : (z_dim,)
 
-    torch.cuda.empty_cache()
+            with torch.no_grad():
+                x = vae.decoder(z)  # shape : (input_dim,)
+
+            x = x.view(num_timesteps, num_neurons)  # shape : (num_timesteps, num_neurons)
+            xs.append(x.detach().cpu().numpy())
+
+        _plot_samples(xs, y, save_dir, save_tag)
