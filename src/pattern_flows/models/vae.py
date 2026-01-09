@@ -24,10 +24,16 @@ class ResidualMLP(nn.Module):
     def __init__(self, in_dim, width, out_dim, n_blocks=3, block_inner_dim=None, dropout=0.0):
         super().__init__()
         self.in_proj = nn.Linear(in_dim, width)
-        self.blocks = nn.Sequential(*[
-            ResidualMLPBlock(width, inner_dim=block_inner_dim, dropout=dropout)
-            for _ in range(n_blocks)
-        ])
+        blocks = []
+        for i in range(n_blocks):
+            blocks.append(
+                ResidualMLPBlock(
+                    width,
+                    inner_dim=block_inner_dim,
+                    dropout=dropout
+                )
+            )
+        self.blocks = nn.Sequential(*blocks)
         self.act = nn.LeakyReLU(0.2)
         self.out_proj = nn.Linear(width, out_dim)
 
