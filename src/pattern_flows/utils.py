@@ -38,7 +38,7 @@ def plot_losses(train_losses, valid_losses, save_dir, save_tag=""):
     plt.plot(valid_losses, label="Validation losss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.set_ylim(0, min(train_losses[0], 10))
+    plt.ylim(0, min(train_losses[0], 10))
     plt.legend()
 
     plt.tight_layout()
