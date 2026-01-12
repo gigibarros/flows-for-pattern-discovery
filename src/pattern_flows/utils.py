@@ -3,8 +3,6 @@ from pathlib import Path
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import umap.umap_ as umap
-import seaborn as sns
 
 from pattern_flows.data.toy_data import get_toy_dataset, get_valid_loader
 from pattern_flows.models.vae import get_vae
@@ -88,51 +86,6 @@ def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
             xs.append(x.detach().cpu().numpy())
 
         _plot_flow_samples(xs, y, save_dir, save_tag)
-
-def visualize_vae(vae_model, valid_loader, save_dir, save_tag):
-    """Plot UMAP of VAE latent space."""
-    zs = []
-    labels = []
-
-    vae_model.eval()
-
-    with torch.no_grad():
-        for batch in valid_loader:
-            x = batch[0]
-            y = batch[1]
-
-            x = torch.flatten(x, start_dim=1, end_dim=-1).to(vae_model.device)
-
-            _, mean, _ = vae_model(x)
-
-            zs.append(mean.cpu().numpy())
-            labels.append(y.cpu().numpy())
-
-    zs = np.concatenate(zs, axis=0)
-    labels = np.concatenate(labels, axis=0)
-
-    reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, metric="euclidean", random_state=42)
-    embedding = reducer.fit_transform(zs)
-
-    plt.figure(figsize=(8, 6))
-
-    colors = sns.color_palette("Set1", n_colors=len(np.unique(labels)))
-
-    for i, label_val in enumerate(np.unique(labels)):
-        idx = labels == label_val
-        plt.scatter(
-            embedding[idx, 0], embedding[idx, 1],
-            c=[colors[i]], label=f"y = {label_val}", s=12, alpha=0.8
-        )    
-        
-    plt.title("UMAP projection of VAE latent space")
-    plt.xlabel("UMAP 1")
-    plt.ylabel("UMAP 2")
-    plt.legend()
-    plt.tight_layout()
-
-    plt.savefig(save_dir / f"vae_umap_{save_tag}.png")
-    plt.close()
 
 def _plot_vae_samples(x0_in, x0_hat, x1_in, x1_hat, save_dir, epoch=None):
     """Plot samples from dataset."""
