@@ -77,7 +77,7 @@ class ToyData(Dataset):
         self.words_1 = base_words.clone()
 
         for k in self.signal_words:
-            self.words_1[k] *= 2.0
+            self.words_1[k] *= 3.0
 
         self.xs = []
         self.ys = []

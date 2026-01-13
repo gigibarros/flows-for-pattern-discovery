@@ -16,7 +16,7 @@ def get_ckpt_file(config, model_name, epoch=None):
     dir.mkdir(exist_ok=True, parents=True)
 
     if epoch:
-        return dir / f"{model_name}_epoch_{epoch}.pth"
+        return dir / f"{model_name}_epoch={epoch}.pth"
     else:
         return dir / f"{model_name}.pth"
 

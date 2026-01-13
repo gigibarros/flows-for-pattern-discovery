@@ -143,6 +143,7 @@ def get_vae(config, multimodal=False, ckpt_file=None):
         vae = VAE(encoder=encoder, decoder=decoder, device=device)
 
     if ckpt_file:
-        vae.load_state_dict(torch.load(ckpt_file))
+        ckpt = torch.load(ckpt_file)
+        vae.load_state_dict(ckpt["vae"])
     
     return vae
