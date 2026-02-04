@@ -40,11 +40,8 @@ def plot_losses(train_losses, valid_losses, save_dir, save_tag=""):
     plt.savefig(save_dir / f"losses_{save_tag}.png")
     plt.close()
 
-def _plot_flow_samples(xs, y, save_dir, save_tag=""):
+def _plot_flow_samples(xs, y, vmin, vmax, save_dir, save_tag=""):
     fig, axs = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
-
-    vmin = min(x.min() for x in xs)
-    vmax = max(x.max() for x in xs)
 
     for idx, ax in enumerate(axs.flat):
         im = ax.imshow(xs[idx].T, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
@@ -56,7 +53,7 @@ def _plot_flow_samples(xs, y, save_dir, save_tag=""):
 
     fig.savefig(save_dir / f"samples_{save_tag}_y={y}.png")
     plt.close(fig)
-
+    
 def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
     num_timesteps     = config["data"]["num_timesteps"]
     num_neurons       = config["data"]["num_neurons"]
@@ -67,11 +64,12 @@ def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
 
     samples = torch.randn(samples_per_y, z_dim, token_size).to(device)
 
-    for y in [0, 1]:
-        xs = []
+    x_0s = []
+    x_1s = []
 
+    for y in [0, 1]:
         with torch.no_grad():
-            zs = tarflow.reverse(samples, y)  # shape : (samples_per_class, z_dim // token_size, token_size)
+            zs = tarflow.reverse(samples, y)  # shape : (samples_per_class, z_dim, token_size)
             
         for z in zs:
             z = z.squeeze(-1)  # shape : (z_dim,)
@@ -80,9 +78,17 @@ def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
                 x = vae.decoder(z)  # shape : (input_dim,)
 
             x = x.view(num_timesteps, num_neurons)  # shape : (num_timesteps, num_neurons)
-            xs.append(x.detach().cpu().numpy())
 
-        _plot_flow_samples(xs, y, save_dir, save_tag)
+            if y == 0:
+                x_0s.append(x.detach().cpu().numpy())
+            if y == 1:
+                x_1s.append(x.detach().cpu().numpy())
+
+    vmin = min(x.min() for x in x_0s + x_1s)
+    vmax = max(x.max() for x in x_0s + x_1s)
+
+    _plot_flow_samples(x_0s, 0, vmin, vmax, save_dir, save_tag)
+    _plot_flow_samples(x_1s, 1, vmin, vmax, save_dir, save_tag)
 
 def _plot_vae_samples(x0_in, x0_hat, x1_in, x1_hat, save_dir, epoch=None):
     """Plot samples from dataset."""
