@@ -30,34 +30,50 @@ def get_save_dir(output_dir):
 
     return save_dir
 
-def plot_losses(train_losses, valid_losses, save_dir, save_tag=""):
-    """Plot training and validation losses."""
-    plt.plot(train_losses, label="Training loss")
-    plt.plot(valid_losses, label="Validation losss")
+def plot_losses(train_losses, valid_losses, source_name, ckpt_dir, output_dir):
+    plt.figure()
+    plt.plot(train_losses, label="train")
+    plt.plot(valid_losses, label="valid")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.ylim(min(train_losses), min(train_losses[0], 10))
     plt.legend()
 
-    plt.tight_layout()
-    plt.savefig(save_dir / f"losses_{save_tag}.png")
-    plt.close()
+    all_losses = np.concatenate([train_losses, valid_losses])
+    y_min, y_max = np.percentile(all_losses, [0, 99])
+    plt.ylim(y_min, y_max)
 
-def _plot_flow_samples(xs, y, vmin, vmax, save_dir, save_tag=""):
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/losses_{source_name}.png")
+
+def plot_dff_samples(xs, y, save_dir, source_name, save_tag="", max_cells=25):
+    xs = np.array(xs)  # shape: (4, num_cells, window_size)
+
+    vmin, vmax = np.percentile(xs, [2, 98])
+
     fig, axs = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
 
     for idx, ax in enumerate(axs.flat):
-        im = ax.imshow(xs[idx].T, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
-        ax.set_ylabel("Activity")
-        ax.set_xlabel("Time")
+
+        sample = xs[idx][:max_cells, :]
+
+        im = ax.imshow(
+            sample,
+            aspect="auto",
+            cmap="viridis",
+            vmin=vmin,
+            vmax=vmax
+        )
+
+        ax.set_ylabel(f"cell (first {max_cells})")
+        ax.set_xlabel("time (frames)")
 
     fig.colorbar(im, ax=axs, shrink=0.8)
-    fig.suptitle(f"Generative samples conditioned on y = {y}")
+    fig.suptitle(f"{source_name.capitalize()} samples (y = {y})")
 
-    fig.savefig(save_dir / f"samples_{save_tag}_y={y}.png")
+    fig.savefig(save_dir / f"{source_name}_samples_{save_tag}_y={y}.png")
     plt.close(fig)
 
-def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
+def sample_toy_flow(vae, tarflow, config, save_dir, save_tag=""):
     num_timesteps     = config["data"]["num_timesteps"]
     num_neurons       = config["data"]["num_neurons"]
     token_size        = config["tarflow"]["token_size"]
@@ -90,13 +106,43 @@ def sample_flow(vae, tarflow, config, save_dir, save_tag=""):
     vmin = min(x.min() for x in x_0s + x_1s)
     vmax = max(x.max() for x in x_0s + x_1s)
 
-    _plot_flow_samples(x_0s, 0, vmin, vmax, save_dir, save_tag)
-    _plot_flow_samples(x_1s, 1, vmin, vmax, save_dir, save_tag)
+    for xs in [x_0s, x_1s]:
+        fig, axs = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
 
-def _plot_vae_samples(x0_in, x0_hat, x1_in, x1_hat, save_dir, epoch=None):
-    """Plot samples from dataset."""
+        for idx, ax in enumerate(axs.flat):
+            im = ax.imshow(xs[idx].T, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
+            ax.set_ylabel("Activity")
+            ax.set_xlabel("Time")
 
-    # set consistent color scale across all plotss
+        fig.colorbar(im, ax=axs, shrink=0.8)
+        fig.suptitle(f"Generative samples conditioned on y = {y}")
+
+        fig.savefig(save_dir / f"samples_{save_tag}_y={y}.png")
+        plt.close(fig)
+
+def sample_toy_vae(config, vae_model, save_dir, epoch=None):
+    num_timesteps  = config["fluor_data"]["num_timesteps"]
+    num_neurons    = config["fluor_data"]["num_neurons"]
+
+    # --- generate samples ---
+    dataset = get_toy_dataset(config)
+
+    x0_in = dataset.generate_x(y=0)
+    x1_in = dataset.generate_x(y=1)
+
+    x0_flat = torch.flatten(x0_in)
+    x1_flat = torch.flatten(x1_in)
+
+    h0, _ = vae_model.encoder(x0_flat)
+    h1, _ = vae_model.encoder(x1_flat)
+
+    x0_hat = vae_model.decoder(h0)
+    x1_hat = vae_model.decoder(h1)
+
+    x0_hat = x0_hat.detach().cpu().numpy().reshape(num_timesteps, num_neurons)
+    x1_hat = x1_hat.detach().cpu().numpy().reshape(num_timesteps, num_neurons)
+
+    # --- plot samples ---
     vmin = min(x0_in.min(), x0_hat.min(), x1_in.min(), x1_hat.min())
     vmax = max(x0_in.max(), x0_hat.max(), x1_in.max(), x1_hat.max())
 
@@ -134,27 +180,3 @@ def _plot_vae_samples(x0_in, x0_hat, x1_in, x1_hat, save_dir, epoch=None):
     plt.savefig(save_dir / f"vae_samples_epoch={epoch}.png" if epoch is not None else save_dir / "vae_samples.png")
 
     plt.close()
-
-def sample_vae(config, vae_model, save_dir, epoch=None):
-    num_timesteps  = config["data"]["num_timesteps"]
-    num_neurons    = config["data"]["num_neurons"]
-
-    dataset = get_toy_dataset(config)
-    
-    # generate one sample each for y = 0 and y = 1
-    x0_in = dataset.generate_x(y=0)
-    x1_in = dataset.generate_x(y=1)
-
-    x0_flat = torch.flatten(x0_in)
-    x1_flat = torch.flatten(x1_in)
-
-    h0, _ = vae_model.encoder(x0_flat)
-    h1, _ = vae_model.encoder(x1_flat)
-
-    x0_hat = vae_model.decoder(h0)
-    x1_hat = vae_model.decoder(h1)
-
-    x0_hat = x0_hat.detach().cpu().numpy().reshape(num_timesteps, num_neurons)
-    x1_hat = x1_hat.detach().cpu().numpy().reshape(num_timesteps, num_neurons)
-
-    _plot_vae_samples(x0_in, x0_hat, x1_in, x1_hat, save_dir, epoch)

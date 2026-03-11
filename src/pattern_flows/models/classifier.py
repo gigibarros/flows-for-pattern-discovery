@@ -22,6 +22,6 @@ class Classifier(nn.Module):
         return self.net(x)
     
 def get_classifier(config):
-    input_dim = config["data"]["input_dim"]
+    input_dim = config["vae"]["input_dim"]
     
     return Classifier(input_dim)
